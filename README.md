@@ -1,2 +1,230 @@
-# hdf5-to-ASCII
-A python code that allows conversion of arbitrarily formatted nxs (hdf5) files at the ILL to ASCII files, if this is for some reason preferred for any kinds of online analysis.
+# NeXus to ASCII Converter
+
+A command-line tool for extracting data from NeXus/HDF5 (`.nxs`) files and exporting selected datasets to CSV files that can be opened in Excel, Origin, or Python.
+
+---
+
+## Requirements
+
+```
+pip install h5py numpy
+```
+
+---
+
+## Usage
+
+Run the script from a terminal (not a Python interpreter or Jupyter cell):
+
+```bash
+python nxs_to_ascii.py
+```
+
+The script will guide you through a series of prompts. No configuration file or command-line arguments are needed.
+
+---
+
+## Step-by-step Prompts
+
+### 1. File location and run range
+
+```
+Data folder path          : 2026.06.27-29 holding nxs
+File extension (e.g. .nxs): .nxs
+First run number          : 126952
+Last run number           : 126960
+Step (default 1)          : 3
+```
+
+- **Data folder path** — the folder containing your `.nxs` files. Files must be named `<run_number><suffix>`, e.g. `126952.nxs`.
+- **File extension** — usually `.nxs`. The dot is optional.
+- **Step** — use `2` to process every other run, `3` for every third, etc. Press Enter for step 1.
+
+### 2. Dataset listing
+
+The script opens the first file and prints every dataset it contains, with its shape, data type, and units:
+
+```
+  #    Path                                                    Shape                Dtype        Units
+  ---------------------------------------------------------------------------------------------------------
+  0    entry0/SUPERSUN/Detector1/data                          (1024, 16, 3562)     uint32
+  1    entry0/SUPERSUN/Detector1/detrate                       (1,)                 float32
+  ...
+  47   entry0/log/Environment_PUCNInstr/average                (1,)                 float64
+  49   entry0/log/Environment_PUCNInstr/values                 (712,)               float64
+  52   entry0/log/ReactorPower_Rpower/values                   (712,)               float64
+  63   entry0/user/name                                        (1,)                 |S8
+```
+
+### 3. Dataset selection
+
+Enter a comma-separated list of dataset numbers. **You can repeat a number** to extract multiple quantities from the same dataset (e.g. different detector channels):
+
+```
+Enter dataset numbers to export (comma-separated, e.g. 0,0,3,5): 0,0,0,49,52,63
+```
+
+### 4. Per-dataset configuration
+
+For each selected dataset the script asks how to handle it.
+
+#### 1D datasets (e.g. time series)
+
+```
+Dataset: entry0/log/Environment_PUCNInstr/values  shape=(712,)
+  Slice range? (e.g. 1:600, or press Enter for all):
+  Column label (default: last part of path): avg pressure
+```
+
+- **Slice range** — optionally restrict to a sub-range of indices, e.g. `1:600`. Press Enter to take all values.
+- **Column label** — the header name in the output CSV.
+
+#### String datasets (e.g. user name)
+
+```
+Dataset: entry0/user/name  shape=(1,)
+  Slice range? (e.g. 1:600, or press Enter for all):
+  Column label (default: last part of path): name
+```
+
+Handled automatically — no float conversion attempted.
+
+#### Higher-dimensional datasets
+
+For datasets with 3 or more dimensions, the script asks what to do with each axis:
+
+| Operation | Description |
+|-----------|-------------|
+| `sum`     | Sum all values along this axis |
+| `mean`    | Average all values along this axis |
+| `index N` | Select a single slice at position N (0-indexed) |
+| `keep`    | Use this axis as the rows of the output column |
+
+Exactly one axis should be marked `keep` — this becomes the output column length. All other axes must be reduced to a single value via `sum`, `mean`, or `index N`.
+
+### 5. Output folder
+
+```
+Output folder (default: ascii_output): my_output
+```
+
+The folder is created if it does not exist. Each run is written as `<run_number>.csv`.
+
+---
+
+## Worked Example — Detector Data + Slow Controls
+
+This example extracts three quantities from the 3D detector array `(1024, 16, 3562)` — where the axes are **(ADC bins, detector channel, time)** — plus pressure, reactor power, and user name.
+
+**Selection input:**
+```
+Enter dataset numbers to export: 0,0,0,49,52,63
+```
+
+**Dataset 0 — first pass: ADC spectrum of channel 0**
+
+Sum over the time axis to get total counts per ADC bin on channel 0.
+
+```
+Dataset: entry0/SUPERSUN/Detector1/data  shape=(1024, 16, 3562)
+
+  Axis 0 (size 1024): keep       ← ADC bins become the rows
+  Axis 1 (size 16):   index 0    ← select channel 0
+  Axis 2 (size 3562): sum        ← sum over all time bins
+  Column label: monitor adc
+```
+
+Output: 1024 rows, one per ADC bin.
+
+**Dataset 0 — second pass: count rate vs time on channel 0 (monitor)**
+
+Sum over ADC bins to get total counts per time step on channel 0.
+
+```
+Dataset: entry0/SUPERSUN/Detector1/data  shape=(1024, 16, 3562)
+
+  Axis 0 (size 1024): sum        ← sum over all ADC bins
+  Axis 1 (size 16):   index 0    ← select channel 0
+  Axis 2 (size 3562): keep       ← time becomes the rows
+  Column label: monitor rate
+```
+
+Output: 3562 rows, one per time bin.
+
+**Dataset 0 — third pass: count rate vs time on channel 8 (Dunya detector)**
+
+```
+Dataset: entry0/SUPERSUN/Detector1/data  shape=(1024, 16, 3562)
+
+  Axis 0 (size 1024): sum        ← sum over all ADC bins
+  Axis 1 (size 16):   index 8    ← select channel 8
+  Axis 2 (size 3562): keep       ← time becomes the rows
+  Column label: dunya rate
+```
+
+Output: 3562 rows, one per time bin.
+
+**Dataset 49 — average pressure (slow control, 712 points)**
+
+```
+Dataset: entry0/log/Environment_PUCNInstr/values  shape=(712,)
+  Slice range? : 
+  Column label : avg pressure
+```
+
+**Dataset 52 — reactor power (slow control, 712 points)**
+
+```
+Dataset: entry0/log/ReactorPower_Rpower/values  shape=(712,)
+  Slice range? : 
+  Column label : rPower
+```
+
+**Dataset 63 — user name (string)**
+
+```
+Dataset: entry0/user/name  shape=(1,)
+  Slice range? : 
+  Column label : name
+```
+
+**Output folder:**
+```
+Output folder: my_output
+```
+
+**Result:**
+
+```
+Processing 3 files...
+
+  ⚠ run126952: "monitor adc" has 1024 values, padding to 3562.
+  ⚠ run126952: "avg pressure" has 712 values, padding to 3562.
+  ⚠ run126952: "rPower" has 712 values, padding to 3562.
+  ⚠ run126952: "name" has 1 values, padding to 3562.
+✓ run126952  →  my_output\126952.csv  (3562 rows, 6 columns)
+```
+
+The output CSV has this structure:
+
+```
+monitor adc, monitor rate, dunya rate, avg pressure, rPower, name
+0.0,         124.0,        88.0,       1.47e-04,     56.2,   hepworth
+1.0,         131.0,        91.0,       1.47e-04,     56.2,
+...
+711.0,       119.0,        77.0,       ,             ,
+...
+1023.0,      108.0,        95.0,       ,             ,
+```
+
+Columns of different lengths are padded with empty cells (strings) or `NaN` (numbers) to match the longest column.
+
+---
+
+## Notes
+
+- **Column length mismatch** — if datasets have different lengths (e.g. 3562 time bins vs 712 slow-control points), shorter columns are padded with `NaN` or empty strings. This is expected and normal.
+- **String columns** — datasets with byte-string dtype (shown as `|S*` in the listing) are decoded and written as text. They are not convertible to float and will be padded with empty cells.
+- **Scalars** — datasets with `shape=(1,)` are treated as a single-row column and padded to match the longest column.
+- **Step > 1** — the script skips missing files gracefully and reports which runs were not found.
+- **Re-running** — the script always re-reads the file structure from the first available file, so it adapts automatically if file layouts differ between run ranges.

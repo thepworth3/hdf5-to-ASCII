@@ -56,9 +56,11 @@ The script opens the first file and prints every dataset it contains, with its s
   63   entry0/user/name                                        (1,)                 |S8
 ```
 
+If you have files which have a different format, you need to process them separately. 
+
 ### 3. Dataset selection
 
-Enter a comma-separated list of dataset numbers. **You can repeat a number** to extract multiple quantities from the same dataset (e.g. different detector channels):
+Enter a comma-separated list of dataset numbers. **You can repeat a number** to extract multiple quantities from the same dataset (e.g. different detector channels stored in a higher dimensional data structure):
 
 ```
 Enter dataset numbers to export (comma-separated, e.g. 0,0,3,5): 0,0,0,49,52,63
@@ -72,8 +74,8 @@ For each selected dataset the script asks how to handle it.
 
 ```
 Dataset: entry0/log/Environment_PUCNInstr/values  shape=(712,)
-  Slice range? (e.g. 1:600, or press Enter for all):
-  Column label (default: last part of path): avg pressure
+  Slice range? (e.g. 1:600, or press Enter for all): specify range
+  Column label (default: last part of path): provide header string
 ```
 
 - **Slice range** — optionally restrict to a sub-range of indices, e.g. `1:600`. Press Enter to take all values.
@@ -87,11 +89,11 @@ Dataset: entry0/user/name  shape=(1,)
   Column label (default: last part of path): name
 ```
 
-Handled automatically — no float conversion attempted.
+String handled automatically — datatype conversion should not be an issue.
 
 #### Higher-dimensional datasets
 
-For datasets with 3 or more dimensions, the script asks what to do with each axis:
+For datasets with 2 or more dimensions, the script asks what to do with each axis. It is presently designed under the assumption that higher dimensional datasets are representing detectors:
 
 | Operation | Description |
 |-----------|-------------|
@@ -100,7 +102,7 @@ For datasets with 3 or more dimensions, the script asks what to do with each axi
 | `index N` | Select a single slice at position N (0-indexed) |
 | `keep`    | Use this axis as the rows of the output column |
 
-Exactly one axis should be marked `keep` — this becomes the output column length. All other axes must be reduced to a single value via `sum`, `mean`, or `index N`.
+Exactly one axis should be marked `keep` — this becomes the output column length. All other axes must be reduced to a single value via `sum`, `mean`, or `index N`. To save the full 3D space to ASCII further changes are required. However any summations you would like to make across the 3D space can be handled in this pre-processing step.
 
 ### 5. Output folder
 
@@ -114,7 +116,7 @@ The folder is created if it does not exist. Each run is written as `<run_number>
 
 ## Worked Example — Detector Data + Slow Controls
 
-This example extracts three quantities from the 3D detector array `(1024, 16, 3562)` — where the axes are **(ADC bins, detector channel, time)** — plus pressure, reactor power, and user name.
+This example extracts three quantities from the 3D detector array `(1024, 16, 3562)` — where the axes are **(ADC bins, detector channel, time)** — plus average pressure, reactor power, and user name. Keep in mind the dataset numbers correspond to SuperSUN on June 30, 2026 and certainly do not translate elsewhere.
 
 **Selection input:**
 ```
@@ -217,7 +219,9 @@ monitor adc, monitor rate, dunya rate, avg pressure, rPower, name
 1023.0,      108.0,        95.0,       ,             ,
 ```
 
-Columns of different lengths are padded with empty cells (strings) or `NaN` (numbers) to match the longest column.
+Columns of different lengths are padded with empty cells (strings) or `NaN` (numbers) to match the longest column. Depending on how you load a file, this could cause mismatching datatype issues. Please keep this in mind.
+
+The error report at the end of the file should indicate any issues with processing that are foreseen. With any bugs or issues with the code, please contact Thomas Hepworth.
 
 ---
 

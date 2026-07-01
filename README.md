@@ -11,6 +11,10 @@ Install directly from GitHub using pip:
 ```bash
 pip install git+https://github.com/<your-username>/nxs_to_ascii.git
 ```
+or on SSH
+```bash 
+pip install git+git@github.com:thepworth3/hdf5-to-ASCII.git
+```
 
 This will install all dependencies automatically and make the command available system-wide. After installation, you can run it from any directory with:
 

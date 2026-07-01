@@ -6,7 +6,7 @@
 #
 # Author      : Thomas Hepworth
 # Institution : Heidelberg University / Institut Laue-Langevin (ILL)
-# Experiment  : SuperSUN UCN experiment
+# Experiment  : SuperSUN/PanEDM
 # Contact     : <thepworth@physi.uni-heidelberg.de>
 #
 # Created     : July 2026

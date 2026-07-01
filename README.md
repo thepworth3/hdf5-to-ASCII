@@ -4,9 +4,29 @@ A command-line tool for extracting data from NeXus/HDF5 (`.nxs`) files and expor
 
 ---
 
+## Installation
+
+Install directly from GitHub using pip:
+
+```bash
+pip install git+https://github.com/<your-username>/nxs_to_ascii.git
+```
+
+This will install all dependencies automatically and make the command available system-wide. After installation, you can run it from any directory with:
+
+```bash
+nxs_to_ascii
+```
+
+No `python` prefix or file path needed.
+
+---
+
 ## Requirements
 
-```
+If you prefer to run the script directly rather than installing it, install the dependencies manually:
+
+```bash
 pip install h5py numpy
 ```
 
@@ -56,7 +76,7 @@ The script opens the first file and prints every dataset it contains, with its s
   63   entry0/user/name                                        (1,)                 |S8
 ```
 
-If you have files which have a different format, you need to process them separately. 
+If you have files which have a different format, you need to process them separately.
 
 ### 3. Dataset selection
 

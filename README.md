@@ -24,7 +24,7 @@ No `python` prefix or file path needed.
 
 ## Requirements
 
-If you prefer to run the script directly rather than installing it, install the dependencies manually:
+If you prefer to run the script directly rather than installing it, install the dependencies manually, and clone the repository to get the script to keep where you like:
 
 ```bash
 pip install h5py numpy

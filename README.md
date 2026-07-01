@@ -14,7 +14,7 @@ pip install h5py numpy
 
 ## Usage
 
-Run the script from a terminal (not a Python interpreter or Jupyter cell):
+Run the script from a terminal:
 
 ```bash
 python nxs_to_ascii.py
@@ -29,16 +29,16 @@ The script will guide you through a series of prompts. No configuration file or 
 ### 1. File location and run range
 
 ```
-Data folder path          : 2026.06.27-29 holding nxs
-File extension (e.g. .nxs): .nxs
-First run number          : 126952
-Last run number           : 126960
-Step (default 1)          : 3
+Data folder path          : your/path/here
+File extension (e.g. .nxs): .nxs (or .hdf5, etc.)
+First run number          : 123456
+Last run number           : 123460
+Step (default 1)          : 2
 ```
 
 - **Data folder path** — the folder containing your `.nxs` files. Files must be named `<run_number><suffix>`, e.g. `126952.nxs`.
 - **File extension** — usually `.nxs`. The dot is optional.
-- **Step** — use `2` to process every other run, `3` for every third, etc. Press Enter for step 1.
+- **Step** — use `2` to process every other run, `3` for every third, etc. Press Enter or 1 for step 1.
 
 ### 2. Dataset listing
 

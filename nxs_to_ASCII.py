@@ -1,9 +1,30 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Wed Jul  1 15:26:42 2026
+# =============================================================================
+# nxs_to_ascii.py
+#
+# Description : Extracts datasets from NeXus/HDF5 (.nxs) files and exports
+#               them as CSV files for plotting and analysis.
+#
+# Author      : Thomas Hepworth
+# Institution : Heidelberg University / Institut Laue-Langevin (ILL)
+# Experiment  : SuperSUN UCN experiment
+# Contact     : <thepworth@physi.uni-heidelberg.de>
+#
+# Created     : July 2026
+# Version     : 1.0
+#
+# License     : MIT License
+#               Copyright (c) 2026 Thomas Hepworth
+#               Permission is hereby granted, free of charge, to any person
+#               obtaining a copy of this software to use, copy, modify, and
+#               distribute it, subject to the condition that this copyright
+#               notice is retained in all copies.
+#
+# Dependencies: h5py, numpy
+#
+# Usage       : python nxs_to_ascii.py
+#               See README.md for full documentation and worked examples.
+# =============================================================================
 
-@author: thoma
-"""
 
 import h5py
 import numpy as np

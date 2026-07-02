@@ -2,6 +2,9 @@
 
 A command-line tool for extracting data from NeXus/HDF5 (`.nxs`) files and exporting selected datasets to CSV files that can be opened in Excel, Origin, or Python. This is useful for quick inspection of ASCII values to see if your files are okay, or if you do not want to do analysis using available hdf5 python readers supported by the ILL, or elsewhere. 
 
+Another use case would be simulations. PENTrack can write HDF5 files much faster than ASCII, and you could extract data afterward with this tool if you like.
+
+
 ---
 
 ## Installation

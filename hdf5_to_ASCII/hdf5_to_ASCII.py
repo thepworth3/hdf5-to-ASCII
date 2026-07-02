@@ -1,35 +1,31 @@
 # =============================================================================
-# nxs_to_ascii.py
+# hdf5_to_ascii.py
 #
 # Description : Extracts datasets from NeXus/HDF5 (.nxs) files and exports
 #               them as CSV files for plotting and analysis.
 #
 # Author      : Thomas Hepworth
 # Institution : Heidelberg University / Institut Laue-Langevin (ILL)
-# Experiment  : SuperSUN/PanEDM
-# Contact     : <thepworth@physi.uni-heidelberg.de>
+# Experiment  : SuperSUN UCN experiment
 #
-# Created     : July 2026
-# Version     : 1.0
+# Created     : June 2026
+# Version     : 1.1
 #
 # License     : MIT License
 #               Copyright (c) 2026 Thomas Hepworth
-#               Permission is hereby granted, free of charge, to any person
-#               obtaining a copy of this software to use, copy, modify, and
-#               distribute it, subject to the condition that this copyright
-#               notice is retained in all copies.
 #
 # Dependencies: h5py, numpy
 #
-# Usage       : python nxs_to_ascii.py
+# Usage       : hdf5_to_ascii
+#               hdf5_to_ascii --dump-all
 #               See README.md for full documentation and worked examples.
 # =============================================================================
-
 
 import h5py
 import numpy as np
 import os
 import csv
+import argparse
 
 
 def find_filepath(folder, run_number, suffix):
@@ -65,7 +61,6 @@ def print_datasets(datasets):
 
 
 def prompt_slice(prompt_text):
-    """Keep asking until the user enters a valid N:M slice or presses Enter for all."""
     while True:
         raw = input(prompt_text).strip()
         if raw == '':
@@ -86,7 +81,6 @@ def prompt_run_range():
     suffix = input('  File extension (e.g. .nxs): ').strip()
     if not suffix.startswith('.'):
         suffix = '.' + suffix
-
     start = int(input('  First run number          : '))
     end   = int(input('  Last run number           : '))
     step  = input('  Step (default 1)          : ').strip()
@@ -96,16 +90,113 @@ def prompt_run_range():
     return folder, suffix, runs
 
 
+def auto_nd_columns(path, shape):
+    """
+    Auto-generate all useful column configs from a higher-dimensional dataset.
+    For a 3D dataset (A, B, C) — assumed to be (ADC, channel, time) —
+    generates:
+      - ADC spectrum per channel:  keep A, index B=n, sum C
+      - Total ADC spectrum:        keep A, sum B,     sum C
+      - Rate vs time per channel:  sum A,  index B=n, keep C
+      - Total rate vs time:        sum A,  sum B,     keep C
+    For 2D (A, B):
+      - keep A, sum B
+      - keep B, sum A
+    """
+    name = path.split('/')[-2] if '/' in path else path  # use parent group as base name
+
+    configs = []
+
+    if len(shape) == 2:
+        sa, sb = shape
+        configs.append({
+            'path': path, 'label': f'{name}_keepAx0_sumAx1',
+            'nd_ops': [('keep', 0), ('sum', 1)], 'slicing': None
+        })
+        configs.append({
+            'path': path, 'label': f'{name}_sumAx0_keepAx1',
+            'nd_ops': [('sum', 0), ('keep', 1)], 'slicing': None
+        })
+
+    elif len(shape) == 3:
+        sa, sb, sc = shape
+
+        # ADC spectrum per channel (keep axis 0, index axis 1, sum axis 2)
+        for n in range(sb):
+            configs.append({
+                'path': path,
+                'label': f'{name}_adc_ch{n}',
+                'nd_ops': [('keep', 0), ('index', n), ('sum', 2)],
+                'slicing': None
+            })
+        # Total ADC spectrum (keep axis 0, sum axis 1, sum axis 2)
+        configs.append({
+            'path': path,
+            'label': f'{name}_adc_all',
+            'nd_ops': [('keep', 0), ('sum', 1), ('sum', 2)],
+            'slicing': None
+        })
+        # Rate vs time per channel (sum axis 0, index axis 1, keep axis 2)
+        for n in range(sb):
+            configs.append({
+                'path': path,
+                'label': f'{name}_rate_ch{n}',
+                'nd_ops': [('sum', 0), ('index', n), ('keep', 2)],
+                'slicing': None
+            })
+        # Total rate vs time (sum axis 0, sum axis 1, keep axis 2)
+        configs.append({
+            'path': path,
+            'label': f'{name}_rate_all',
+            'nd_ops': [('sum', 0), ('sum', 1), ('keep', 2)],
+            'slicing': None
+        })
+
+    else:
+        print(f'  ⚠ Auto-dump: {len(shape)}D dataset {path} skipped '
+              f'(only 2D and 3D auto-reduction supported).')
+
+    return configs
+
+
+def auto_select_all(datasets):
+    """
+    Automatically generate column configs for every dataset without prompting.
+    """
+    column_configs = []
+    for path, info in datasets.items():
+        shape = info['shape']
+        dtype = info['dtype']
+        name  = path.split('/')[-1]
+
+        if len(shape) == 0:
+            continue  # skip scalars
+
+        elif h5py.check_string_dtype(dtype) or str(dtype).startswith('|S'):
+            column_configs.append({
+                'path': path, 'slicing': (slice(None),),
+                'label': name, 'nd_ops': None
+            })
+
+        elif len(shape) == 1:
+            column_configs.append({
+                'path': path, 'slicing': (slice(None),),
+                'label': name, 'nd_ops': None
+            })
+
+        elif len(shape) in (2, 3):
+            nd_configs = auto_nd_columns(path, shape)
+            column_configs.extend(nd_configs)
+
+        else:
+            print(f'  ⚠ Skipping {path}: {len(shape)}D not supported in auto mode.')
+
+    print(f'  → Auto-selected {len(column_configs)} columns from '
+          f'{len(datasets)} datasets.')
+    return column_configs
+
+
 def prompt_nd_reduction(path, shape):
-    """
-    For an N-dimensional dataset, ask the user what to do with each axis.
-    Options per axis:
-      sum     - sum over this axis
-      mean    - average over this axis
-      index N - select a single index along this axis
-      keep    - keep this axis as the output rows (only one axis can be 'keep')
-    Returns a list of axis operations and a slicing tuple for any initial index selection.
-    """
     print(f'\n  Dataset has {len(shape)} dimensions: {shape}')
     print('  For each axis, choose an operation:')
     print('    sum      - sum all values along this axis')
@@ -148,62 +239,28 @@ def prompt_nd_reduction(path, shape):
                 print('      ⚠ Please enter: sum, mean, index N, or keep.')
 
     if keep_count == 0:
-        print('\n  ⚠ No axis marked as "keep" — result will be a single scalar per file.')
-
+        print('\n  ⚠ No axis marked as "keep" — result will be a single scalar.')
     return ops
-
-
-def apply_nd_reduction(data, ops):
-    """
-    Apply the axis operations to a numpy array.
-    Operations are applied in reverse axis order so that axis indices
-    remain valid after each reduction.
-    """
-    # First pass: apply index selections (these don't change ndim in the same way)
-    # We process from last axis to first to keep indices stable
-    result = data.copy()
-
-    # Apply in reverse order to preserve axis numbering
-    for i, (op, val) in reversed(list(enumerate(ops))):
-        ax = len(ops) - 1 - i  # current axis after previous reductions
-        # Recompute which axis in the current array this corresponds to
-        # Track which original axes are still present
-        pass
-
-    # Simpler approach: build the reduction step by step
-    # tracking current axis positions
-    result = np.array(data, dtype=float)
-    # We'll process axes from highest to lowest to keep indices stable
-    indexed_axes = [(i, op, val) for i, (op, val) in enumerate(ops)]
-
-    # Sort: process 'index' and reductions from last axis to first
-    for orig_ax in range(len(ops) - 1, -1, -1):
-        op, val = ops[orig_ax]
-        # Current axis in result = number of axes before orig_ax that have already been reduced
-        # Since we go from last to first, axes after orig_ax are already gone;
-        # the current axis index equals orig_ax minus the number of axes < orig_ax already removed
-        # Simpler: since we go last→first, current axis = orig_ax (nothing before it removed yet)
-        cur_ax = orig_ax
-        if op == 'sum':
-            result = np.sum(result, axis=cur_ax)
-        elif op == 'mean':
-            result = np.mean(result, axis=cur_ax)
-        elif op == 'index':
-            result = np.take(result, val, axis=cur_ax)
-        elif op == 'keep':
-            pass  # leave this axis alone
-
-    return np.atleast_1d(result)
 
 
 def prompt_dataset_selection(datasets):
     keys = list(datasets.keys())
     print_datasets(datasets)
 
-    raw = input('  Enter dataset numbers to export (comma-separated, e.g. 0,0,3,5): ')
-    indices = [int(x.strip()) for x in raw.split(',')]
-    
-    # Use a list of (path, info) tuples instead of a dict, to allow duplicates
+    while True:
+        raw = input('  Enter dataset numbers to export (comma-separated, e.g. 0,0,3,5): ').strip()
+        if not raw:
+            print('  ⚠ No input detected, please enter at least one number.')
+            continue
+        try:
+            indices = [int(x.strip()) for x in raw.split(',')]
+            if all(0 <= i < len(keys) for i in indices):
+                break
+            else:
+                print(f'  ⚠ All numbers must be between 0 and {len(keys) - 1}.')
+        except ValueError:
+            print('  ⚠ Please enter numbers only, separated by commas.')
+
     selected = [(keys[i], datasets[keys[i]]) for i in indices]
 
     print()
@@ -226,8 +283,8 @@ def prompt_dataset_selection(datasets):
             label = input('    Column label (default: last part of path): ').strip()
             label = label if label else path.split('/')[-1]
             column_configs.append({
-                'path': path, 'slicing': slicing, 'label': label,
-                'ndim': 1, 'nd_ops': None
+                'path': path, 'slicing': slicing,
+                'label': label, 'nd_ops': None
             })
 
         elif len(shape) == 2:
@@ -242,18 +299,17 @@ def prompt_dataset_selection(datasets):
             label = input('    Column label (default: last part of path): ').strip()
             label = label if label else path.split('/')[-1]
             column_configs.append({
-                'path': path, 'slicing': slicing, 'label': label,
-                'ndim': 2, 'nd_ops': None
+                'path': path, 'slicing': slicing,
+                'label': label, 'nd_ops': None
             })
 
         else:
-            # Higher-dimensional: prompt for axis-by-axis reduction
             nd_ops = prompt_nd_reduction(path, shape)
             label = input('    Column label (default: last part of path): ').strip()
             label = label if label else path.split('/')[-1]
             column_configs.append({
-                'path': path, 'slicing': None, 'label': label,
-                'ndim': len(shape), 'nd_ops': nd_ops, 'shape': shape
+                'path': path, 'slicing': None,
+                'label': label, 'nd_ops': nd_ops, 'shape': shape
             })
 
         print()
@@ -261,24 +317,36 @@ def prompt_dataset_selection(datasets):
     return column_configs
 
 
+def apply_nd_reduction(data, ops):
+    result = np.array(data, dtype=float)
+    for orig_ax in range(len(ops) - 1, -1, -1):
+        op, val = ops[orig_ax]
+        cur_ax = orig_ax
+        if op == 'sum':
+            result = np.sum(result, axis=cur_ax)
+        elif op == 'mean':
+            result = np.mean(result, axis=cur_ax)
+        elif op == 'index':
+            result = np.take(result, val, axis=cur_ax)
+        elif op == 'keep':
+            pass
+    return np.atleast_1d(result)
+
+
 def read_column(f, col):
-    """Read and reduce a dataset to a 1D array."""
     path  = col['path']
     dtype = f[path].dtype
 
-    # String datasets
-    if h5py.check_string_dtype(dtype):
+    if h5py.check_string_dtype(dtype) or str(dtype).startswith('|S'):
         raw  = f[path][col['slicing']] if col['slicing'] else f[path][()]
         data = np.atleast_1d(np.array(raw))
-        return np.array([v.decode() if isinstance(v, bytes) else v for v in data]), True
+        return np.array([v.decode() if isinstance(v, bytes) else str(v) for v in data]), True
 
-    # High-dimensional datasets
     if col['nd_ops'] is not None:
         raw  = np.array(f[path][()], dtype=float)
         data = apply_nd_reduction(raw, col['nd_ops'])
         return data, False
 
-    # 1D / 2D datasets
     raw  = f[path][col['slicing']]
     data = np.atleast_1d(np.array(raw, dtype=float))
     return data, False
@@ -309,12 +377,9 @@ def export_run(run_number, folder, suffix, column_configs, output_folder):
         print(f'  ✗ run{run_number}: no valid columns, skipping.')
         return
 
-    # Pad shorter columns
     padded = []
     for data, string_col, label in zip(columns, is_string, labels):
         if len(data) < max_length:
-            print(f'    ⚠ run{run_number}: "{label}" has {len(data)} values, '
-                  f'padding to {max_length}.')
             pad = np.array([''] * (max_length - len(data))) if string_col \
                   else np.full(max_length - len(data), np.nan)
             data = np.concatenate([data, pad])
@@ -331,6 +396,11 @@ def export_run(run_number, folder, suffix, column_configs, output_folder):
 
 
 def main():
+    parser = argparse.ArgumentParser(description='Convert HDF5/NeXus files to ASCII CSV.')
+    parser.add_argument('--dump-all', action='store_true',
+                        help='Automatically export all datasets without prompting.')
+    args = parser.parse_args()
+
     folder, suffix, runs = prompt_run_range()
 
     print('\n  Reading header from first file...')
@@ -353,7 +423,11 @@ def main():
             print(f'    {k}: {v}')
         datasets = collect_datasets(f)
 
-    column_configs = prompt_dataset_selection(datasets)
+    if args.dump_all:
+        print('\n  -- Dump-all mode: auto-selecting all datasets --')
+        column_configs = auto_select_all(datasets)
+    else:
+        column_configs = prompt_dataset_selection(datasets)
 
     if not column_configs:
         print('  No columns selected, exiting.')

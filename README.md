@@ -9,7 +9,7 @@ A command-line tool for extracting data from NeXus/HDF5 (`.nxs`) files and expor
 Install directly from GitHub using pip:
 
 ```bash
-pip install git+https://github.com/<your-username>/nxs_to_ascii.git
+pip install git+https://github.com/thepworth3/hdf5-to-ASCII.git
 ```
 or on SSH
 ```bash 
@@ -19,7 +19,7 @@ pip install git+ssh://git@github.com/thepworth3/hdf5-to-ASCII.git
 This will install all dependencies automatically and make the command available system-wide. After installation, you can run it from any directory with:
 
 ```bash
-nxs_to_ascii
+hdf5_to_ascii
 ```
 
 No `python` prefix or file path needed.

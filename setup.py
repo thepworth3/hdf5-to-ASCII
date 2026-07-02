@@ -1,18 +1,13 @@
-from setuptools import setup, find_packages
+from setuptools import setup
 
 setup(
-    name='hdf5_to_ascii',
+    name='hdf5-to-ASCII',
     version='1.0.0',
     author='Thomas Hepworth',
     description='Extract datasets from NeXus/HDF5 files and export to CSV',
     long_description=open('README.md').read(),
     long_description_content_type='text/markdown',
-    url='https://github.com/thepworth3/hdf5-to-ASCII/tree/main',
-    packages=find_packages(),
-    install_requires=[
-        'h5py',
-        'numpy',
-    ],
+    url='https://github.com/thepworth3/hdf5-to-ASCII',
     packages=['hdf5_to_ASCII'],
     install_requires=[
         'h5py',
@@ -24,11 +19,5 @@ setup(
         ],
     },
     python_requires='>=3.7',
-
-    classifiers=[
-        'Programming Language :: Python :: 3',
-        'License :: OSI Approved :: MIT License',
-        'Operating System :: OS Independent',
-        'Topic :: Scientific/Engineering :: Physics',
-    ],
 )
+    

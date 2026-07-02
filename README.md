@@ -64,6 +64,8 @@ The script will guide you through a series of prompts. No configuration file or 
 
 ## Step-by-step Prompts
 
+If you use the dump-all functionality, note that you will not recieve prompts from step 2,3,4.
+
 ### 1. File location and run range
 
 ```

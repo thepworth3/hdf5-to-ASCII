@@ -13,12 +13,18 @@ setup(
         'h5py',
         'numpy',
     ],
+    packages=['hdf5_to_ASCII'],
+    install_requires=[
+        'h5py',
+        'numpy',
+    ],
     entry_points={
         'console_scripts': [
-            'hdf5_to_ASCII=hdf5_to_ASCII.hdf5_to_ASCII:main',
+            'hdf5_to_ascii=hdf5_to_ASCII.hdf5_to_ASCII:main',
         ],
     },
     python_requires='>=3.7',
+
     classifiers=[
         'Programming Language :: Python :: 3',
         'License :: OSI Approved :: MIT License',

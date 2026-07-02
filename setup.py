@@ -7,7 +7,7 @@ setup(
     description='Extract datasets from NeXus/HDF5 files and export to CSV',
     long_description=open('README.md').read(),
     long_description_content_type='text/markdown',
-    url='https://github.com/<your-username>/nxs_to_ascii',
+    url='https://github.com/thepworth3/hdf5-to-ASCII/tree/main',
     packages=find_packages(),
     install_requires=[
         'h5py',
@@ -15,7 +15,7 @@ setup(
     ],
     entry_points={
         'console_scripts': [
-            'nxs_to_ascii=nxs_to_ascii.nxs_to_ascii:main',
+            'hdf5_to_ascii=hdf5_to_ASCII.hdf5_to_ASCII:main',
         ],
     },
     python_requires='>=3.7',

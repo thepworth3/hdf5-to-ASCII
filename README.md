@@ -44,6 +44,17 @@ pip install h5py numpy
 Run the script from a terminal:
 
 ```bash
+hdf5_to_ascii
+```
+To automatically dump a whole file with auomated headers extracted from hdf5 use:
+
+```bash 
+hdf5_to_ascii --dump-all
+```
+If you are developing the code and running it directly:
+
+
+```bash
 python nxs_to_ascii.py
 ```
 

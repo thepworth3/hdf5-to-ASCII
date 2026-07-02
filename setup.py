@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 setup(
-    name='nxs_to_ascii',
+    name='hdf5_to_ascii',
     version='1.0.0',
     author='Thomas Hepworth',
     description='Extract datasets from NeXus/HDF5 files and export to CSV',

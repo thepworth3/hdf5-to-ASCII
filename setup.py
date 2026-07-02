@@ -15,7 +15,7 @@ setup(
     ],
     entry_points={
         'console_scripts': [
-            'hdf5_to_ascii=hdf5_to_ASCII.hdf5_to_ASCII:main',
+            'hdf5_to_ASCII=hdf5_to_ASCII.hdf5_to_ASCII:main',
         ],
     },
     python_requires='>=3.7',

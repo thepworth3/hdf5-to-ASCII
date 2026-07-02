@@ -1,6 +1,6 @@
 # HDF5/NeXus to ASCII Converter
 
-A command-line tool for extracting data from NeXus/HDF5 (`.nxs`) files and exporting selected datasets to CSV files that can be opened in Excel, Origin, or Python.
+A command-line tool for extracting data from NeXus/HDF5 (`.nxs`) files and exporting selected datasets to CSV files that can be opened in Excel, Origin, or Python. This is useful for quick inspection of ASCII values to see if your files are okay, or if you do not want to do analysis using available hdf5 python readers supported by the ILL, or elsewhere. 
 
 ---
 
